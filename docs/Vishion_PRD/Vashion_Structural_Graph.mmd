@@ -1,0 +1,118 @@
+graph TD
+    V["Vashion<br/>Virtualized Counterpart of the User"]
+
+    V --> NS
+    V --> SS
+    V --> ST
+
+    subgraph NS["Python Nervous System"]
+        direction TB
+
+        COORD["Coordinator Module<br/>Internal communications / arbitration / orchestration"]
+
+        subgraph BRAIN["Brain"]
+            direction TB
+            EXEC["Primary Cloud LLM<br/>The Self of Vashion"]
+            WA["Worker Mind A<br/>Reflex / Utility"]
+            WB["Worker Mind B<br/>Maintenance / Pattern Detection"]
+
+            WA <--> WB
+            WA -. feedback .-> EXEC
+            WB -. feedback .-> EXEC
+        end
+
+        subgraph MEMORY["Memory"]
+            direction TB
+
+            TOKEN["Token Ledger I/O<br/>Shared Context Layer<br/>Persistent conversations"]
+            STM["Short-Term Memory<br/>Daily Operational Memory<br/>Fixed-title YAML-Markdown Files"]
+            NIGHT["Nightly Ingestion<br/>23:00 Local Time"]
+            LTM["Long-Term Memory<br/>Historical Memory<br/>Structured as Stories"]
+
+            subgraph INDEXES["Historical Indexes"]
+                direction LR
+                I1["SOP"]
+                I2["SIC"]
+                I3["Lessons Learned"]
+                I4["CI/CD"]
+                I5["Conversations"]
+                I6["Summaries"]
+            end
+        end
+
+        subgraph SELF["Self"]
+            direction TB
+            BEH["Behavior.md"]
+            SOUL["Soul.md"]
+            SEN["Senses.md"]
+        end
+    end
+
+    subgraph SS["TypeScript Sensory + Context System"]
+        direction TB
+        VISION["Vision<br/>Web Search / External Perception"]
+        HEARING["Hearing<br/>Canvas UI / Conversation Intake"]
+        CANVAS["Canvas Context Layer<br/>Multiple Context Pages<br/>Human-in-the-Loop Deletion Control"]
+        COMMS["Communications Module (Stub)<br/>Slack / Telegram / Email / External Channels"]
+    end
+
+    subgraph ST["Rust Structural System"]
+        direction TB
+        HANDS["Hands<br/>Execution / Manipulation / Tooling"]
+        FEET["Feet<br/>Movement Through Machine + Web Surfaces"]
+    end
+
+    %% Nervous system coordination
+    COORD <--> BRAIN
+    COORD <--> MEMORY
+    COORD <--> SELF
+
+    %% Brain internals
+    EXEC --> WA
+    EXEC --> WB
+
+    %% Memory flows
+    TOKEN <--> COORD
+    STM --> NIGHT
+    NIGHT --> LTM
+    NIGHT -. proposes self updates .-> SELF
+
+    LTM --> I1
+    LTM --> I2
+    LTM --> I3
+    LTM --> I4
+    LTM --> I5
+    LTM --> I6
+
+    %% Sensory / context inputs
+    VISION --> COORD
+    HEARING --> CANVAS
+    CANVAS <--> TOKEN
+    CANVAS --> COORD
+
+    %% External communications
+    CANVAS <--> COMMS
+    COMMS --> COORD
+
+    %% Identity and memory influence
+    SELF --> COORD
+    SELF --> EXEC
+    LTM --> COORD
+    STM --> COORD
+
+    %% Structural action
+    COORD --> HANDS
+    COORD --> FEET
+    HANDS --> COORD
+    FEET --> COORD
+
+    style NS fill:#1f3b2d,stroke:#4caf50,stroke-width:2px,color:#fff
+    style SS fill:#1f2f4a,stroke:#64b5f6,stroke-width:2px,color:#fff
+    style ST fill:#4a2b1f,stroke:#ff8a65,stroke-width:2px,color:#fff
+    style BRAIN fill:#2b5a3d,stroke:#81c784,color:#fff
+    style MEMORY fill:#2b5a3d,stroke:#81c784,color:#fff
+    style SELF fill:#2b5a3d,stroke:#81c784,color:#fff
+    style EXEC fill:#2a2a2a,stroke:#555,stroke-width:2px,color:#fff
+    style CANVAS fill:#20354f,stroke:#7fb3ff,stroke-width:2px,color:#fff
+    style COMMS fill:#20354f,stroke:#7fb3ff,stroke-width:2px,color:#fff
+    style TOKEN fill:#355c3a,stroke:#9be7a1,stroke-width:2px,color:#fff

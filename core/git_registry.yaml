@@ -1,0 +1,38 @@
+enabled: true
+workspace_name: vashion-core
+repo_root: /path/to/repovashion_identity:
+  born_at: 2026-03-28T09:00:00
+  initiated_by: human
+  initialization_complete: true
+
+git_capability:
+  enabled: true
+  repo_registered: true
+  local_repo_initialized: true
+  remote_registered: true
+  push_authority: true
+  branch_policy: nightly_branch
+repo_registered_by: human
+registered_at: 2026-03-28T09:10:00
+
+local_repo:
+  detected: true
+  allowed_to_commit: true
+
+remote_repo:
+  provider: github
+  remote_name: origin
+  remote_url: git@github.com:owner/repo.git
+  allowed_to_push: true
+  allowed_to_create_remote_repo: false
+
+branch_policy:
+  mode: nightly_branch
+  default_branch: main
+  push_branch: dreaming/nightly
+  direct_push_to_main: false
+
+governance:
+  hitl_required_for_registration: true
+  hitl_required_for_remote_change: true
+  hitl_required_for_branch_policy_change: true
