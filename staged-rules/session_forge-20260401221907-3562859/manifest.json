@@ -1,0 +1,26 @@
+{
+  "sessionId": "forge-20260401221907-3562859",
+  "timestamp": "2026-04-02T05:24:08.430Z",
+  "shs": {
+    "score": 50,
+    "factors": {
+      "successRate": 0,
+      "efficiencyFactor": 1,
+      "budgetFactor": 1
+    },
+    "mode": "REMEDIATION"
+  },
+  "analytics": {
+    "totalStories": 17,
+    "passedStories": 0,
+    "totalIterations": 1,
+    "avgIterationsPerStory": 0.058823529411764705,
+    "totalTokens": 0
+  },
+  "manifest": {
+    "staged_at": "2026-04-02T05:24:08.430Z",
+    "expires_at": "2026-04-09T05:24:08.430Z",
+    "source_checksum": "NONE",
+    "status": "pending"
+  }
+}

@@ -23,12 +23,12 @@
       "description": "Rust-native shell execution engine with async streaming, cancellation, bounded timeouts, structured command model, and policy firewall admission control before any process is spawned.",
       "acceptanceCriteria": [
         "Supports structured argv invocation (primary) and explicit-flag shell invocation (secondary)",
-        "Streaming stdout/stderr via tokio::process; output chunks delivered as they arrive — no buffering",
+        "Streaming stdout/stderr via tokio::process; output chunks delivered as they arrive \u2014 no buffering",
         "Caller can cancel any in-flight process; SIGTERM sent, then SIGKILL after 5s grace period",
         "Default timeout: 15 minutes; policy-extendable per command via VSH-003",
         "Every execution records PID, start time, output reference for VSH-007 crash recovery",
-        "Command injection check on all inputs before FW classification — FW never sees raw untrusted input",
-        "sudo blocked unconditionally at this layer — not delegated to VSH-003",
+        "Command injection check on all inputs before FW classification \u2014 FW never sees raw untrusted input",
+        "sudo blocked unconditionally at this layer \u2014 not delegated to VSH-003",
         "Executable not in allowlist rejected before FW classification; structured error returned",
         "Firewall return contract respected: Tier 1 executes, Tier 2 holds until plan_token approved, Tier 3 always rejects"
       ],
@@ -40,12 +40,12 @@
         "Add timeout enforcement (15-minute default) and SIGTERM/SIGKILL grace period",
         "Implement execution record struct (PID, start time, output reference) and unit tests"
       ],
-      "technicalNotes": "Phase 1 story. core/ is a Rust workspace. VSH-003 (Policy Firewall) is the admission gate — VSH-001 must call VSH-003 before spawning any process. Allowlist lives at ~/.vashion/policy/exec-allowlist.json. sudo is blocked at this layer unconditionally.",
+      "technicalNotes": "Phase 1 story. core/ is a Rust workspace. VSH-003 (Policy Firewall) is the admission gate \u2014 VSH-001 must call VSH-003 before spawning any process. Allowlist lives at ~/.vashion/policy/exec-allowlist.json. sudo is blocked at this layer unconditionally.",
       "safetyGates": [
         "No process spawned before firewall returns allowed: true",
-        "Tier 2 pending state is caller-visible — SHELL never silently blocks",
-        "Tier 3 denial is final — no retry, no escalation",
-        "Shell invocation mode requires explicit flag — default is structured argv"
+        "Tier 2 pending state is caller-visible \u2014 SHELL never silently blocks",
+        "Tier 3 denial is final \u2014 no retry, no escalation",
+        "Shell invocation mode requires explicit flag \u2014 default is structured argv"
       ]
     },
     {
@@ -62,7 +62,7 @@
         "Caller can cancel any in-flight Docker operation; termination logged",
         "Docker socket/group access preferred; --privileged blocked by default",
         "Every Docker operation classified by VSH-003 firewall before execution",
-        "Destructive ops (prune, rm) classified as Tier 2 — require approval",
+        "Destructive ops (prune, rm) classified as Tier 2 \u2014 require approval",
         "All privilege violations audit-logged with action, tier, and reason"
       ],
       "implementationPlan": [
@@ -76,7 +76,7 @@
       "technicalNotes": "Depends on VSH-003 being scaffolded first. --privileged must be blocked at descriptor construction, not left to policy config. All operations use same Tier plan_token contract as VSH-001.",
       "safetyGates": [
         "--privileged blocked by default; requires explicit policy exception",
-        "docker prune and docker rm are Tier 2 — no auto-execution"
+        "docker prune and docker rm are Tier 2 \u2014 no auto-execution"
       ]
     },
     {
@@ -86,14 +86,14 @@
       "status": "todo",
       "passes": false,
       "storyType": "implementation",
-      "description": "Deterministic policy firewall classifying every action via machine-verifiable ActionDescriptor schema into Tier 1 (auto-execute), Tier 2 (approval required), or Tier 3 (blocked). Soul.md and Behavior.md tune policy — they do not replace the classifier.",
+      "description": "Deterministic policy firewall classifying every action via machine-verifiable ActionDescriptor schema into Tier 1 (auto-execute), Tier 2 (approval required), or Tier 3 (blocked). Soul.md and Behavior.md tune policy \u2014 they do not replace the classifier.",
       "acceptanceCriteria": [
-        "Every action classified via ActionDescriptor — missing or invalid descriptor is a hard rejection",
+        "Every action classified via ActionDescriptor \u2014 missing or invalid descriptor is a hard rejection",
         "TierDecision written to audit log before execution for every action",
         "Tier 1: plan_token returned, execution proceeds immediately",
         "Tier 2: plan_token held; AutoApprovalPolicy evaluated first; auto-approve or escalate to user",
         "Tier 3: immediate structured rejection; audit log entry written; no bypass path",
-        "Policy allowlist at ~/.vashion/policy/allowlist.json — user-editable; every change audit-logged",
+        "Policy allowlist at ~/.vashion/policy/allowlist.json \u2014 user-editable; every change audit-logged",
         "Core authenticates every outbound /approvals webhook with session token"
       ],
       "implementationPlan": [
@@ -104,13 +104,13 @@
         "Implement /approvals outbound webhook to Brain with Bearer token auth and 3-retry backoff",
         "Write TierDecision to audit log before execution; add unit tests for each tier path"
       ],
-      "technicalNotes": "This is the critical shared gate used by VSH-001, VSH-002, and VSH-004. Tier rules are evaluated against descriptor fields, not prose. decision_hash ties approval to exact action parameters — modified action requires new approval. Nonce is single-use; TTL default 30s.",
+      "technicalNotes": "This is the critical shared gate used by VSH-001, VSH-002, and VSH-004. Tier rules are evaluated against descriptor fields, not prose. decision_hash ties approval to exact action parameters \u2014 modified action requires new approval. Nonce is single-use; TTL default 30s.",
       "safetyGates": [
-        "Descriptor fields are required — missing field = Tier 2 minimum; unknown fields never default to Tier 1",
-        "Auto-approval allowlist is deny-by-default — unlisted action classes always escalate to user",
-        "Decision hash enforced — modified action cannot reuse prior approval",
-        "Tier 3 has no bypass — not even with explicit session-level approval",
-        "No approval request is silently lost — undelivered requests sit in pending-delivery queue until Brain reconnects"
+        "Descriptor fields are required \u2014 missing field = Tier 2 minimum; unknown fields never default to Tier 1",
+        "Auto-approval allowlist is deny-by-default \u2014 unlisted action classes always escalate to user",
+        "Decision hash enforced \u2014 modified action cannot reuse prior approval",
+        "Tier 3 has no bypass \u2014 not even with explicit session-level approval",
+        "No approval request is silently lost \u2014 undelivered requests sit in pending-delivery queue until Brain reconnects"
       ]
     },
     {
@@ -125,7 +125,7 @@
         "Supports: read, write, delete, move, list within configured workspace roots",
         "Workspace roots defined in ~/.vashion/config.toml",
         "Reads within roots: Tier 1. Writes within roots: Tier 1. Operations outside roots: Tier 2.",
-        "delete is always Tier 2 — irreversible, regardless of path",
+        "delete is always Tier 2 \u2014 irreversible, regardless of path",
         "Symlink traversal blocked by default; must not escape workspace root",
         "Every file operation audit-logged with path, operation, tier, and outcome"
       ],
@@ -137,10 +137,10 @@
         "Wire all operations through VSH-003 firewall",
         "Audit-log every operation with path, tier, and outcome; add unit tests including symlink escape cases"
       ],
-      "technicalNotes": "delete is always Tier 2 regardless of path — do not make this configurable. Symlink escape detection must run before firewall classification. Workspace roots from ~/.vashion/config.toml.",
+      "technicalNotes": "delete is always Tier 2 regardless of path \u2014 do not make this configurable. Symlink escape detection must run before firewall classification. Workspace roots from ~/.vashion/config.toml.",
       "safetyGates": [
-        "Symlink escape detection on every path before FW classification — FW never sees an escaped path",
-        "Delete always Tier 2 — no exception"
+        "Symlink escape detection on every path before FW classification \u2014 FW never sees an escaped path",
+        "Delete always Tier 2 \u2014 no exception"
       ]
     },
     {
@@ -155,11 +155,11 @@
         "Stores model credentials encrypted at rest at ~/.vashion/auth/",
         "Supports providers: Anthropic, OpenAI, local (Ollama)",
         "Active model switchable at runtime without restart",
-        "Credentials never written to logs, memory DB, or audit trail — appear as [REDACTED]",
+        "Credentials never written to logs, memory DB, or audit trail \u2014 appear as [REDACTED]",
         "Model registry stores per-model: name, provider, context window, cost tier",
         "Registry queried by brain at startup to inform goal loop and context budgeting",
         "Auth state included in VSH-007 checkpoint so model context survives crashes",
-        "Rekey handshake completes without manual intervention — Brain self-recovers from Core restart"
+        "Rekey handshake completes without manual intervention \u2014 Brain self-recovers from Core restart"
       ],
       "implementationPlan": [
         "Implement session token generation and epoch-stamped write to ~/.vashion/auth/core.token (mode 600)",
@@ -171,9 +171,9 @@
       ],
       "technicalNotes": "Token format: { token, epoch, issued_at, ttl }. Wrong token OR stale epoch = immediate rejection. Brain enters degraded state on epoch mismatch, not just auth failure. Credentials must never appear in any log, memory, or audit entry.",
       "safetyGates": [
-        "Credentials never logged — enforced at write layer, not caller convention",
+        "Credentials never logged \u2014 enforced at write layer, not caller convention",
         "Registry query is read-only; writes require explicit mutation call",
-        "Stale epoch rejection is immediate — Brain never retries with a known-bad token",
+        "Stale epoch rejection is immediate \u2014 Brain never retries with a known-bad token",
         "Degraded state is operator-visible via Canvas health endpoint"
       ]
     },
@@ -192,21 +192,21 @@
         "Routine: logged locally only. Notable: posted to brain /events with traceparent. Urgent: posted immediately outside pulse schedule.",
         "Pulse history retained for 24h; entries older than 24h pruned automatically",
         "Static urgent thresholds always active: mandatory service down 2 pulses, disk > 85%, mem < 512MB",
-        "Z-score anomaly detection with 30-sample minimum, 2σ threshold, burst suppression, 5-min dedup cooldown",
+        "Z-score anomaly detection with 30-sample minimum, 2\u03c3 threshold, burst suppression, 5-min dedup cooldown",
         "Webhook delivery retried up to 3 times with exponential backoff; failure written to audit log"
       ],
       "implementationPlan": [
         "Add src/heartbeat/ module; implement configurable pulse scheduler (tokio interval)",
         "Implement snapshot collector: processes, containers, disk, memory, network",
         "Implement delta classifier: diff against previous snapshot, apply static thresholds and z-score model",
-        "Implement escalation state machine per resource (normal → warning → urgent → sustained_urgent)",
+        "Implement escalation state machine per resource (normal \u2192 warning \u2192 urgent \u2192 sustained_urgent)",
         "Implement Brain webhook delivery with Bearer token auth, 3-retry backoff, and urgent local queue on failure",
         "Implement 24h pulse history with automatic pruning; add tests for threshold breach and dedup cooldown"
       ],
-      "technicalNotes": "Urgent events bypass pulse schedule — fire immediately. Cooldown does not apply to static threshold breaches. Z-score activates only after 30 samples; before that, fall back to static cold-start thresholds (CPU > 90%, mem < 256MB).",
+      "technicalNotes": "Urgent events bypass pulse schedule \u2014 fire immediately. Cooldown does not apply to static threshold breaches. Z-score activates only after 30 samples; before that, fall back to static cold-start thresholds (CPU > 90%, mem < 256MB).",
       "safetyGates": [
         "Webhook delivery retried; failure written to audit log",
-        "Urgent events never dropped — written to local urgent queue if webhook fails",
+        "Urgent events never dropped \u2014 written to local urgent queue if webhook fails",
         "Cooldown does not apply to static threshold breaches"
       ]
     },
@@ -217,15 +217,15 @@
       "status": "todo",
       "passes": false,
       "storyType": "implementation",
-      "description": "Checkpoint-based state persistence for crash recovery. Surfaces dirty state to brain on restart — does not auto-resume.",
+      "description": "Checkpoint-based state persistence for crash recovery. Surfaces dirty state to brain on restart \u2014 does not auto-resume.",
       "acceptanceCriteria": [
         "Checkpoint written before every Tier 2 operation and on clean shutdown (SIGTERM/SIGINT)",
         "Checkpoint contains: active processes, open Docker operations, pending Tier 2 approvals, auth state reference, heartbeat cursor",
         "On startup: detect prior checkpoint file; classify as clean or dirty",
         "dirty checkpoint (prior crash): posted to Brain event bus as urgent event before accepting new commands",
         "clean checkpoint: loaded silently; state restored, Brain notified",
-        "Checkpoint files at ~/.vashion/checkpoints/; rotate — keep last 5, delete older",
-        "Recovery does not auto-resume interrupted operations — reports state and waits for direction"
+        "Checkpoint files at ~/.vashion/checkpoints/; rotate \u2014 keep last 5, delete older",
+        "Recovery does not auto-resume interrupted operations \u2014 reports state and waits for direction"
       ],
       "implementationPlan": [
         "Define Checkpoint struct covering all required state fields",
@@ -235,11 +235,11 @@
         "Integrate auth state reference from VSH-005 into checkpoint struct",
         "Add unit tests for atomic write, rotation, clean vs dirty classification"
       ],
-      "technicalNotes": "Checkpoint write is atomic (write to temp, rename) — no partial checkpoint files. Checkpoint files never written to MEM_S — disk only, so recovery is independent of database state. Recovery never auto-resumes.",
+      "technicalNotes": "Checkpoint write is atomic (write to temp, rename) \u2014 no partial checkpoint files. Checkpoint files never written to MEM_S \u2014 disk only, so recovery is independent of database state. Recovery never auto-resumes.",
       "safetyGates": [
-        "Checkpoint write is atomic (write to temp, rename) — no partial checkpoint files",
+        "Checkpoint write is atomic (write to temp, rename) \u2014 no partial checkpoint files",
         "Dirty checkpoint always surfaced before new input accepted",
-        "Checkpoint files never written to MEM_S — disk only"
+        "Checkpoint files never written to MEM_S \u2014 disk only"
       ]
     },
     {
@@ -249,14 +249,14 @@
       "status": "todo",
       "passes": false,
       "storyType": "implementation",
-      "description": "Two-tier memory storage (episodic and durable) in SQLite. Single internal async write queue. Brain accesses exclusively via Unix socket memory API — no direct DB connection from Brain.",
+      "description": "Two-tier memory storage (episodic and durable) in SQLite. Single internal async write queue. Brain accesses exclusively via Unix socket memory API \u2014 no direct DB connection from Brain.",
       "acceptanceCriteria": [
         "Two stores: episodic (short-term, 7-day default expiry) and durable (persisted across sessions)",
         "Episodic entries: timestamp, source service, content, relevance score, expiry",
         "Durable entries: promoted from episodic by brain only; require user_approved = true",
-        "Context budget enforced at item granularity — whole items dropped when over budget, never truncated",
+        "Context budget enforced at item granularity \u2014 whole items dropped when over budget, never truncated",
         "Memory API exposed on Unix socket alongside other core commands",
-        "Brain accesses MEM_S exclusively via Unix socket memory API — no direct DB connection",
+        "Brain accesses MEM_S exclusively via Unix socket memory API \u2014 no direct DB connection",
         "Pending Tier 2 plan_token records stored in MEM_S; never silently expire",
         "On Brain reconnect: Brain queries memory_query { filter: approvals:pending } to re-surface pending approvals"
       ],
@@ -268,12 +268,12 @@
         "Implement episodic 7-day expiry and durable promotion guard (user_approved required)",
         "Implement approval state schema and reconnect reconciliation path; add integration tests"
       ],
-      "technicalNotes": "SQLite at ~/.vashion/memory.db with WAL mode. Single internal async write queue — no lock contention, no last-write-wins. Durable promotion requires user_approved=true enforced in write queue, not caller convention. Brain has no direct SQLite access.",
+      "technicalNotes": "SQLite at ~/.vashion/memory.db with WAL mode. Single internal async write queue \u2014 no lock contention, no last-write-wins. Durable promotion requires user_approved=true enforced in write queue, not caller convention. Brain has no direct SQLite access.",
       "safetyGates": [
-        "Durable write requires user_approved = true — enforced in write queue, not caller convention",
-        "Context budget enforcement is a hard error — not a warning",
-        "Brain has no direct SQLite access — all reads and writes through Unix socket API",
-        "Pending approval state lives in Core — not in any process that can be restarted without losing it"
+        "Durable write requires user_approved = true \u2014 enforced in write queue, not caller convention",
+        "Context budget enforcement is a hard error \u2014 not a warning",
+        "Brain has no direct SQLite access \u2014 all reads and writes through Unix socket API",
+        "Pending approval state lives in Core \u2014 not in any process that can be restarted without losing it"
       ]
     },
     {
@@ -283,31 +283,31 @@
       "status": "todo",
       "passes": false,
       "storyType": "implementation",
-      "description": "Python MCP server exposing core capabilities as structured tools for LLM consumption. Single Unix socket client for all Brain→Core communication. Handles three distinct failure modes with defined behavior for each.",
+      "description": "Python MCP server exposing core capabilities as structured tools for LLM consumption. Single Unix socket client for all Brain\u2192Core communication. Handles three distinct failure modes with defined behavior for each.",
       "acceptanceCriteria": [
         "Implements MCP server exposing core as tools: shell_exec, docker_op, file_read, file_write, memory_query, heartbeat_status",
-        "Every tool call follows: LLM → Brain (MCP) → Core (Unix socket + session token); traceparent propagated at every hop",
-        "Per-call Unix socket timeout: 30s default — no call waits indefinitely",
-        "Three failure modes handled distinctly: connection refused, auth rejection, timeout — each with defined Brain response",
-        "LLM failure mode: retry once → fallback chain (Anthropic → OpenAI → Ollama) → halt",
+        "Every tool call follows: LLM \u2192 Brain (MCP) \u2192 Core (Unix socket + session token); traceparent propagated at every hop",
+        "Per-call Unix socket timeout: 30s default \u2014 no call waits indefinitely",
+        "Three failure modes handled distinctly: connection refused, auth rejection, timeout \u2014 each with defined Brain response",
+        "LLM failure mode: retry once \u2192 fallback chain (Anthropic \u2192 OpenAI \u2192 Ollama) \u2192 halt",
         "Cost logged per call: model name, tokens in, tokens out, duration ms",
         "MEM_I and HB_CTX route all Core memory queries through this layer"
       ],
       "implementationPlan": [
         "Scaffold brain/ Python package with src/main.py entry point and MCP server setup",
         "Implement Unix socket client with session token + epoch auth and 30s per-call timeout",
-        "Implement three failure mode handlers: connection refused → degraded, auth rejection → rekey, timeout → degraded",
+        "Implement three failure mode handlers: connection refused \u2192 degraded, auth rejection \u2192 rekey, timeout \u2192 degraded",
         "Implement MCP tool definitions: shell_exec, docker_op, file_read, file_write, memory_query, heartbeat_status",
-        "Implement LLM fallback chain (Anthropic → OpenAI → Ollama) with cost logging per call",
+        "Implement LLM fallback chain (Anthropic \u2192 OpenAI \u2192 Ollama) with cost logging per call",
         "Add traceparent propagation on all hops; add unit tests for each failure mode"
       ],
-      "technicalNotes": "Depends on Phase 1 (VSH-001 through VSH-008) complete. Brain is the sole Unix socket client — MEM_I and HB_CTX use this layer, not direct socket access. Degraded state: no new goal acceptance. Recovery: poll socket every 10s, exit degraded on successful ping.",
+      "technicalNotes": "Depends on Phase 1 (VSH-001 through VSH-008) complete. Brain is the sole Unix socket client \u2014 MEM_I and HB_CTX use this layer, not direct socket access. Degraded state: no new goal acceptance. Recovery: poll socket every 10s, exit degraded on successful ping.",
       "safetyGates": [
         "Session token validated on every Unix socket connection",
-        "traceparent required on all tool calls — missing header is an error",
-        "Costs logged before result returned — no silent failures",
+        "traceparent required on all tool calls \u2014 missing header is an error",
+        "Costs logged before result returned \u2014 no silent failures",
         "Fallback chain exhausted = hard halt, not silent degradation",
-        "No Unix socket call waits indefinitely — 30s timeout enforced without exception"
+        "No Unix socket call waits indefinitely \u2014 30s timeout enforced without exception"
       ]
     },
     {
@@ -322,25 +322,25 @@
         "Goals sourced from: web REST API, heartbeat urgent events (VSH-012), internal scheduler",
         "Each goal tracked with status: queued / active / blocked / complete / failed / preempted",
         "Priority queue: urgent > operator > scheduled; urgent goals preempt operator goals",
-        "Resource lock model: workspace, container, system — acquire all or none, atomic",
+        "Resource lock model: workspace, container, system \u2014 acquire all or none, atomic",
         "Blocked goals (awaiting Tier 2 approval) hold locks released; locks re-acquired on resume",
-        "Loop reads Soul.md and Behavior.md at startup — missing file is a hard error",
+        "Loop reads Soul.md and Behavior.md at startup \u2014 missing file is a hard error",
         "Core unreachable: Goal Loop halts immediately, active goals fail or block, blocked goals re-queued on recovery",
         "Failed goals: root cause written to episodic memory; no blind retry"
       ],
       "implementationPlan": [
         "Implement priority queue with urgent/operator/scheduled tiers and preemption semantics",
         "Implement resource lock model (workspace/container/system): acquire-all-or-none, atomic",
-        "Implement goal lifecycle state machine: queued → active → blocked/complete/failed/preempted",
+        "Implement goal lifecycle state machine: queued \u2192 active \u2192 blocked/complete/failed/preempted",
         "Load Soul.md and Behavior.md at startup; hard error on missing file",
         "Implement Core-unreachable handler: halt acceptance, transition active goals, re-queue on recovery",
         "Write goal history, reasoning steps, lock events to episodic memory via VSH-009; add tests"
       ],
       "technicalNotes": "Depends on VSH-009. Starvation prevention: scheduled goals starved > 10 minutes promoted to operator priority. Urgent cancellation can cancel any active goal; operator cancellation limited to operator and scheduled goals only.",
       "safetyGates": [
-        "Soul.md / Behavior.md loaded at startup — missing file is a hard error",
-        "Lock acquisition is atomic — partial lock is not held",
-        "No blind retry — failure written to memory, diagnosis required",
+        "Soul.md / Behavior.md loaded at startup \u2014 missing file is a hard error",
+        "Lock acquisition is atomic \u2014 partial lock is not held",
+        "No blind retry \u2014 failure written to memory, diagnosis required",
         "Preempted operator goals re-queued, never silently dropped",
         "Core unreachable = Goal Loop halts immediately"
       ]
@@ -356,7 +356,7 @@
       "acceptanceCriteria": [
         "Reads episodic entries from MEM_S via VSH-009 Unix socket memory API",
         "Relevance scoring: ranks episodic entries for inclusion in LLM context at goal loop startup",
-        "Promotion follows 6-stage pipeline — no stage may be skipped",
+        "Promotion follows 6-stage pipeline \u2014 no stage may be skipped",
         "Session-start narrative: synthesizes last heartbeat delta + durable context before first goal",
         "Context budget: respects VSH-008 limits; lowest-relevance items dropped first",
         "Durable entries immutable after write; updates via deprecation chain only",
@@ -370,12 +370,12 @@
         "Implement durable lifecycle: immutable writes, deprecation chain for updates, soft/hard delete",
         "Add tests for promotion pipeline stage enforcement and dedup rejection"
       ],
-      "technicalNotes": "Depends on VSH-009. No direct SQLite access — all reads and writes through VSH-009 Unix socket API. Session-start narrative failure is non-fatal but logged. Promotion candidate detection: episodic entry referenced in 3+ distinct sessions.",
+      "technicalNotes": "Depends on VSH-009. No direct SQLite access \u2014 all reads and writes through VSH-009 Unix socket API. Session-start narrative failure is non-fatal but logged. Promotion candidate detection: episodic entry referenced in 3+ distinct sessions.",
       "safetyGates": [
-        "No direct SQLite access — all reads and writes through VSH-009 Unix socket API",
-        "No silent durable promotion — all 6 stages required",
-        "Duplication check is mandatory — near-duplicate promotion is a hard rejection",
-        "Durable entries are immutable — updates via deprecation chain only"
+        "No direct SQLite access \u2014 all reads and writes through VSH-009 Unix socket API",
+        "No silent durable promotion \u2014 all 6 stages required",
+        "Duplication check is mandatory \u2014 near-duplicate promotion is a hard rejection",
+        "Durable entries are immutable \u2014 updates via deprecation chain only"
       ]
     },
     {
@@ -393,7 +393,7 @@
         "Urgent events: inserted as priority-0 goal in VSH-010 immediately; also forwarded to MEM_I",
         "Session-start: loads last 24h heartbeat narrative into context before accepting user input",
         "If brain was offline when core posted: event written to core local urgent queue; delivered on reconnect",
-        "HB_CTX never writes directly to MEM_S — all memory writes via MEM_I → VSH-009"
+        "HB_CTX never writes directly to MEM_S \u2014 all memory writes via MEM_I \u2192 VSH-009"
       ],
       "implementationPlan": [
         "Implement /events webhook endpoint in Brain entry point",
@@ -403,9 +403,9 @@
         "Implement while-you-were-away section for session-start when notable events occurred during gap",
         "Add tests for routing, narrative generation, and offline delivery path"
       ],
-      "technicalNotes": "Depends on VSH-010 and VSH-011. HB_CTX never writes directly to MEM_S — all writes go through MEM_I → VSH-009. Urgent events never silently dropped — delivery to Goal confirmed or event queued.",
+      "technicalNotes": "Depends on VSH-010 and VSH-011. HB_CTX never writes directly to MEM_S \u2014 all writes go through MEM_I \u2192 VSH-009. Urgent events never silently dropped \u2014 delivery to Goal confirmed or event queued.",
       "safetyGates": [
-        "Urgent events never silently dropped — delivery to GOAL confirmed or event queued",
+        "Urgent events never silently dropped \u2014 delivery to GOAL confirmed or event queued",
         "Session-start narrative includes explicit while-you-were-away section if notable events occurred",
         "HB_CTX never writes directly to MEM_S"
       ]
@@ -425,7 +425,7 @@
         "Proxies all requests to Brain at 127.0.0.1:7475 with traceparent and request_id",
         "Plugin webhooks (Slack, Telegram) auth token validated before forwarding to Brain",
         "All requests and responses logged via pino with full shared log schema",
-        "Health check endpoint at /health — returns Core and Brain reachability status"
+        "Health check endpoint at /health \u2014 returns Core and Brain reachability status"
       ],
       "implementationPlan": [
         "Scaffold web/ TypeScript package: tsconfig, package.json, src/main.ts entry point",
@@ -435,10 +435,10 @@
         "Implement plugin webhook auth validation (token check before any forwarding)",
         "Implement /health endpoint querying Core and Brain reachability; add integration tests"
       ],
-      "technicalNotes": "Depends on Phase 2 (VSH-009 through VSH-012) complete. traceparent generated at entry if not present; never silently dropped. All external calls to Brain wrapped with explicit error handling. Core→Brain webhook calls on /approvals and /events must validate session token.",
+      "technicalNotes": "Depends on Phase 2 (VSH-009 through VSH-012) complete. traceparent generated at entry if not present; never silently dropped. All external calls to Brain wrapped with explicit error handling. Core\u2192Brain webhook calls on /approvals and /events must validate session token.",
       "safetyGates": [
         "traceparent generated at entry if not present; never silently dropped",
-        "Plugin webhook auth validated before any forwarding — unauthenticated plugin requests rejected 401",
+        "Plugin webhook auth validated before any forwarding \u2014 unauthenticated plugin requests rejected 401",
         "All external calls to Brain wrapped with explicit error handling"
       ]
     },
@@ -458,8 +458,8 @@
         "System panel: disk, memory, container status at a glance",
         "REPL panel: raw command input with Tier classification displayed before execution",
         "Real-time updates via WebSocket (VSH-015)",
-        "Tier 2 approval prompts surface in UI — user approves or denies inline",
-        "No external dependencies — no CDN calls; all assets served locally"
+        "Tier 2 approval prompts surface in UI \u2014 user approves or denies inline",
+        "No external dependencies \u2014 no CDN calls; all assets served locally"
       ],
       "implementationPlan": [
         "Implement SPA structure served from VSH-013; configure bundler with no external CDN assets",
@@ -469,9 +469,9 @@
         "Implement System panel: disk/mem/container status",
         "Implement REPL panel with Tier classification preview and Tier 2 inline approval/denial UI"
       ],
-      "technicalNotes": "Depends on VSH-013 and VSH-015. All assets must be served locally — no CDN. Tier 2 approvals require explicit user action in UI — no auto-approval. Approval state is owned by Core (VSH-008), not Web process memory.",
+      "technicalNotes": "Depends on VSH-013 and VSH-015. All assets must be served locally \u2014 no CDN. Tier 2 approvals require explicit user action in UI \u2014 no auto-approval. Approval state is owned by Core (VSH-008), not Web process memory.",
       "safetyGates": [
-        "Tier 2 approvals require explicit user action — no auto-approval in UI",
+        "Tier 2 approvals require explicit user action \u2014 no auto-approval in UI",
         "No external network calls from frontend"
       ]
     },
@@ -482,7 +482,7 @@
       "status": "todo",
       "passes": false,
       "storyType": "implementation",
-      "description": "WebSocket server at 127.0.0.1:7474/ws providing real-time bidirectional communication. All incoming client messages route through Canvas Backend validation — no separate unvalidated entry point.",
+      "description": "WebSocket server at 127.0.0.1:7474/ws providing real-time bidirectional communication. All incoming client messages route through Canvas Backend validation \u2014 no separate unvalidated entry point.",
       "acceptanceCriteria": [
         "WebSocket server at 127.0.0.1:7474/ws",
         "Pushes to client: goal state changes, heartbeat events, Tier 2 approval requests, urgent alerts",
@@ -490,7 +490,7 @@
         "All incoming WS messages routed through Canvas Backend request validation before reaching Brain",
         "traceparent generated at WS message receipt; propagated on all downstream calls",
         "Client auto-reconnects with exponential backoff (max 30s interval)",
-        "Messages typed and validated on receipt — malformed messages logged and discarded"
+        "Messages typed and validated on receipt \u2014 malformed messages logged and discarded"
       ],
       "implementationPlan": [
         "Implement WebSocket server on 127.0.0.1:7474/ws alongside VSH-013 REST server",
@@ -500,10 +500,10 @@
         "Implement typed message schema validation; log and discard malformed messages",
         "Add tests for validation pipeline, disconnect handling, and approval state recovery on reconnect"
       ],
-      "technicalNotes": "Depends on VSH-013. WS messages share the same validation and tracing pipeline as REST — no free pass. Pending approval state owned by Core (VSH-008) — disconnect and backend restart do not lose it; Web re-fetches on reconnect. Rate limiting applied equally to WS and REST.",
+      "technicalNotes": "Depends on VSH-013. WS messages share the same validation and tracing pipeline as REST \u2014 no free pass. Pending approval state owned by Core (VSH-008) \u2014 disconnect and backend restart do not lose it; Web re-fetches on reconnect. Rate limiting applied equally to WS and REST.",
       "safetyGates": [
         "WS messages share the same validation and tracing pipeline as REST",
-        "Pending approval state owned by Core — disconnect does not lose approval state",
+        "Pending approval state owned by Core \u2014 disconnect does not lose approval state",
         "Rate limiting applied equally to WS and REST paths"
       ]
     },
@@ -514,7 +514,7 @@
       "status": "todo",
       "passes": false,
       "storyType": "implementation",
-      "description": "Goal submission and status updates via Slack DM. Urgent alerts pushed proactively. Plugin webhook received by VSH-013, auth token validated, forwarded to Brain. Deferred — build after Phase 3 stable.",
+      "description": "Goal submission and status updates via Slack DM. Urgent alerts pushed proactively. Plugin webhook received by VSH-013, auth token validated, forwarded to Brain. Deferred \u2014 build after Phase 3 stable.",
       "acceptanceCriteria": [
         "Goal submission via Slack DM forwarded through VSH-013 Canvas Backend",
         "Status updates pushed to Slack on goal completion or failure",
@@ -525,14 +525,14 @@
       "implementationPlan": [
         "Implement Slack plugin handler in brain/plugins/ within the single plugin host process",
         "Implement Slack webhook receiver registration and token validation",
-        "Implement goal submission path: Slack DM → VSH-013 → Brain Goal Loop",
-        "Implement proactive push: Brain urgent alert → Slack DM/channel",
+        "Implement goal submission path: Slack DM \u2192 VSH-013 \u2192 Brain Goal Loop",
+        "Implement proactive push: Brain urgent alert \u2192 Slack DM/channel",
         "Add end-to-end tests for submit, status update, and alert paths"
       ],
-      "technicalNotes": "Deferred until Phase 3 complete and verified. Plugin host is a single process in brain/plugins/ sharing Brain auth context. All plugin-originated requests enter via VSH-013 Canvas Backend — no direct Brain access.",
+      "technicalNotes": "Deferred until Phase 3 complete and verified. Plugin host is a single process in brain/plugins/ sharing Brain auth context. All plugin-originated requests enter via VSH-013 Canvas Backend \u2014 no direct Brain access.",
       "safetyGates": [
         "Plugin webhook auth validated at VSH-013 before any forwarding",
-        "No direct Brain Goal Loop access from plugin — must go through Canvas Backend"
+        "No direct Brain Goal Loop access from plugin \u2014 must go through Canvas Backend"
       ]
     },
     {
@@ -542,7 +542,7 @@
       "status": "todo",
       "passes": false,
       "storyType": "implementation",
-      "description": "Goal submission and urgent alerts via Telegram bot. Same entry path as VSH-016 — through VSH-013 Canvas Backend. Deferred — build after Phase 3 stable.",
+      "description": "Goal submission and urgent alerts via Telegram bot. Same entry path as VSH-016 \u2014 through VSH-013 Canvas Backend. Deferred \u2014 build after Phase 3 stable.",
       "acceptanceCriteria": [
         "Goal submission via Telegram bot forwarded through VSH-013 Canvas Backend",
         "Urgent alerts pushed proactively to configured Telegram chat",
@@ -552,14 +552,14 @@
       "implementationPlan": [
         "Implement Telegram plugin handler in brain/plugins/ within the single plugin host process",
         "Implement Telegram bot webhook receiver and token validation",
-        "Implement goal submission path: Telegram → VSH-013 → Brain Goal Loop",
-        "Implement proactive push: Brain urgent alert → Telegram chat",
+        "Implement goal submission path: Telegram \u2192 VSH-013 \u2192 Brain Goal Loop",
+        "Implement proactive push: Brain urgent alert \u2192 Telegram chat",
         "Add end-to-end tests for submit and alert paths"
       ],
-      "technicalNotes": "Deferred until Phase 3 complete and verified. Same architecture as VSH-016 — single plugin host process, all requests through Canvas Backend.",
+      "technicalNotes": "Deferred until Phase 3 complete and verified. Same architecture as VSH-016 \u2014 single plugin host process, all requests through Canvas Backend.",
       "safetyGates": [
         "Plugin webhook auth validated at VSH-013 before any forwarding",
-        "No direct Brain Goal Loop access from plugin — must go through Canvas Backend"
+        "No direct Brain Goal Loop access from plugin \u2014 must go through Canvas Backend"
       ]
     }
   ],
