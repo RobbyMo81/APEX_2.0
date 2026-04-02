@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "forgemp"
+version = "1.0.0"
+description = "Forge Python quality baseline and runtime migration scaffolding"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "requests==2.31.0",
+  "PyYAML>=6.0.2,<7",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.11,<2",
+  "pytest>=8.3,<9",
+  "ruff>=0.6.9,<0.7",
+]
+
+[tool.setuptools]
+packages = ["forge"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [
+  ".forge",
+  ".git",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".ruff_cache",
+  ".venv",
+  "archive",
+  "node_modules",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+warn_return_any = true
+disallow_any_generics = true
+no_implicit_optional = true
+show_error_codes = true
+files = [
+  "forge",
+  "src/sidecars/sys_monitor.py",
+  "tests/python",
+]
+
+[[tool.mypy.overrides]]
+module = "requests"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests/python"]
+python_files = ["test_*.py"]
+addopts = "-q --ignore=forge"

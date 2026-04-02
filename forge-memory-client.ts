@@ -14,6 +14,18 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync } from 'fs';
 import { createHash } from 'node:crypto';
 
+function getForgeWorkspaceDir(): string {
+  return process.env.FORGE_WORKSPACE_DIR ?? '.forge';
+}
+
+function getPrdPath(): string {
+  return process.env.FORGE_PRD_FILE ?? 'prd.json';
+}
+
+function getWorkspacePath(filename: string): string {
+  return `${getForgeWorkspaceDir()}/${filename}`;
+}
+
 // ── Types ─────────────────────────────────────────────────
 
 export type MessageType = 'DISCOVERY' | 'BLOCKER' | 'HANDOFF' | 'WARNING' | 'STATUS' | 'DECISION';
@@ -121,7 +133,7 @@ export class ForgeMemory {
   private storyId: string;
 
   constructor(
-    dbPath: string = 'forge-memory.db',
+    dbPath: string = process.env.FORGE_DB ?? getWorkspacePath('forge-memory.db'),
     sessionId: string,
     iteration: number,
     storyId: string
@@ -151,6 +163,10 @@ export class ForgeMemory {
     this.sessionId = sessionId;
     this.iteration = iteration;
     this.storyId = storyId;
+  }
+
+  public getDatabase(): DatabaseSync {
+    return this.db;
   }
 
   /**
@@ -235,20 +251,20 @@ export class ForgeMemory {
     const logEntry = `\n[${timestamp}] ${this.storyId} (iter ${this.iteration}): ${status.toUpperCase()} — ${summary}\n`;
     
     // Update progress.txt
-    appendFileSync('progress.txt', logEntry);
+    appendFileSync(getWorkspacePath('progress.txt'), logEntry);
     console.log('[FORGE MEMORY] ✓ progress.txt updated');
 
     // Update AGENTS.md with structured discoveries
     const discoveriesMd = this.compileAgentsMd();
     if (discoveriesMd) {
-      appendFileSync('AGENTS.md', discoveriesMd);
+      appendFileSync(getWorkspacePath('AGENTS.md'), discoveriesMd);
       console.log('[FORGE MEMORY] ✓ AGENTS.md updated with new discoveries');
     }
   }
 
   // ── READS ────────────────────────────────────────────────
 
-  readStartupReport(reportPath: string = 'forge-startup-report.md'): string {
+  readStartupReport(reportPath: string = process.env.FORGE_STARTUP_REPORT_FILE ?? getWorkspacePath('forge-startup-report.md')): string {
     if (!existsSync(reportPath)) {
       return '(No startup report found — forge.sh may not have run cleanly)';
     }
@@ -476,6 +492,11 @@ export class ForgeMemory {
   }
 }
 
+interface PrdStory {
+  id: string;
+  passes: boolean;
+}
+
 // ── ForgeRefiner Class (V2.2 SIC) ──────────────────────────
 
 export class ForgeRefiner {
@@ -488,11 +509,11 @@ export class ForgeRefiner {
   /**
    * Run full performance analysis for a session.
    */
-  analyzeSession(sessionId: string, prdFile: string = 'prd.json'): RefinementReport {
+  analyzeSession(sessionId: string, prdFile: string = getPrdPath()): RefinementReport {
     // 1. Load PRD stats
     const prd = JSON.parse(readFileSync(prdFile, 'utf-8'));
     const totalStories = prd.userStories?.length || 0;
-    const passedStories = prd.userStories?.filter((s: any) => s.passes).length || 0;
+    const passedStories = prd.userStories?.filter((s: PrdStory) => s.passes).length || 0;
 
     // 2. Query Telemetry
     const iterations = this.db.prepare(
@@ -658,7 +679,7 @@ export class ForgeRefiner {
 
 if (require.main === module) {
   const [,, cmd, ...args] = process.argv;
-  const db = new DatabaseSync('forge-memory.db');
+  const db = new DatabaseSync(process.env.FORGE_DB ?? getWorkspacePath('forge-memory.db'));
 
   switch (cmd) {
     case 'messages':

@@ -6,7 +6,7 @@
   "main": "forge-memory-client.ts",
   "scripts": {
     "start": "bash ./forge.sh",
-    "apex": "ts-node --project tsconfig.json src/apex/main.ts",
+    "generate-gates": "bash ./forge.sh generate-gates",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",

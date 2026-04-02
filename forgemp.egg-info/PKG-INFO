@@ -1,0 +1,16 @@
+Metadata-Version: 2.4
+Name: forgemp
+Version: 1.0.0
+Summary: Forge Python quality baseline and runtime migration scaffolding
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: requests==2.31.0
+Requires-Dist: PyYAML<7,>=6.0.2
+Provides-Extra: dev
+Requires-Dist: mypy<2,>=1.11; extra == "dev"
+Requires-Dist: pytest<9,>=8.3; extra == "dev"
+Requires-Dist: ruff<0.7,>=0.6.9; extra == "dev"
+
+## Apex_2.0 True Autonomous Agent
+
+

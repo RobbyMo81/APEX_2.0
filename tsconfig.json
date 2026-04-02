@@ -9,6 +9,5 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node", "jest"]
   },
-  "include": ["forge-memory-client.ts", "src/**/*.ts", "tests/**/*.ts"],
-  "exclude": ["src/apex/canvas/ui/**"]
+  "include": ["forge-memory-client.ts", "src/**/*.ts", "tests/**/*.ts"]
 }
