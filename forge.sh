@@ -874,6 +874,21 @@ main() {
       fi
       exit 0
       ;;
+    "--tagteam"|"-t")
+      # V2-049: TagTeam Orchestrator entry point.
+      # Usage: forge.sh --tagteam N  (N = max_agents)
+      local tagteam_agents="${2:-2}"
+      export FORGE_TAGTEAM=true
+      export FORGE_TAGTEAM_AGENTS="$tagteam_agents"
+      if [[ -x "${SCRIPT_DIR}/.venv/bin/python" ]]; then
+        "${SCRIPT_DIR}/.venv/bin/python" -m forge tagteam "$tagteam_agents"
+      elif command -v python3 &>/dev/null && python3 -c "import forge" &>/dev/null; then
+        python3 -m forge tagteam "$tagteam_agents"
+      else
+        fail "--tagteam requires the Python forge module. Run: python3 -m venv .venv && .venv/bin/pip install -e ."
+      fi
+      exit $?
+      ;;
   esac
 
   trap cleanup EXIT INT TERM

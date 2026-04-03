@@ -87,6 +87,22 @@ CREATE TABLE IF NOT EXISTS agent_iterations (
   CHECK(gate_result IS NULL OR gate_result IN ('pass','fail','skipped'))
 );
 
+-- ── TOKEN LEDGER ─────────────────────────────────────────
+-- Per-attempt token accounting for session analytics and SIC.
+CREATE TABLE IF NOT EXISTS token_ledger (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id     TEXT NOT NULL,
+  iteration      INTEGER,
+  story_id       TEXT,
+  backend        TEXT,
+  model          TEXT,
+  input_tokens   INTEGER NOT NULL DEFAULT 0,
+  output_tokens  INTEGER NOT NULL DEFAULT 0,
+  total_tokens   INTEGER NOT NULL DEFAULT 0,
+  source         TEXT,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- ── AGENT MESSAGE BUS ─────────────────────────────────────
 -- Inter-agent communication. Future agents READ unread messages.
 CREATE TABLE IF NOT EXISTS agent_messages (

@@ -1,0 +1,354 @@
+{
+  "version": "1",
+  "generatedAt": "2026-04-03T15:32:48.380153+00:00",
+  "rerun": false,
+  "sourceFilesConsulted": [],
+  "stories": [
+    {
+      "storyId": "VSH-001",
+      "dependsOn": [
+        "VSH-003"
+      ],
+      "interfacesProduced": [
+        "CommandDescriptor Rust struct (structured argv and shell invocation dispatch)",
+        "ExecutionRecord struct (PID, start time, output reference)",
+        "Shell execution async API (spawn, stream stdout/stderr, cancel) over Unix socket",
+        "SIGTERM/SIGKILL cancellation protocol with 5s grace period",
+        "15-minute default timeout enforcement"
+      ],
+      "interfacesConsumed": [
+        "VSH-003 ActionDescriptor/TierDecision firewall classify() contract",
+        "~/.vashion/policy/exec-allowlist.json allowlist config",
+        "tokio::process (external Rust crate)"
+      ],
+      "confidence": "high",
+      "rationale": "technicalNotes explicitly states 'VSH-003 (Policy Firewall) is the admission gate \u2014 VSH-001 must call VSH-003 before spawning any process.'"
+    },
+    {
+      "storyId": "VSH-002",
+      "dependsOn": [
+        "VSH-003"
+      ],
+      "interfacesProduced": [
+        "DockerClient Rust struct wrapping bollard or docker CLI",
+        "Docker operation enum (list, start, stop, build, inspect, logs)",
+        "ActionDescriptor construction for Docker operations",
+        "Streaming output contract (identical to VSH-001)",
+        "Destructive op (prune, rm) Tier 2 classification rule"
+      ],
+      "interfacesConsumed": [
+        "VSH-003 ActionDescriptor/TierDecision firewall classify() contract",
+        "VSH-003 plan_token approval contract for Tier 2 ops",
+        "bollard Rust crate or docker CLI (external)"
+      ],
+      "confidence": "high",
+      "rationale": "technicalNotes explicitly states 'Depends on VSH-003 being scaffolded first' and 'All operations use same Tier plan_token contract as VSH-001.'"
+    },
+    {
+      "storyId": "VSH-003",
+      "dependsOn": [],
+      "interfacesProduced": [
+        "ActionDescriptor Rust struct with 8 required fields",
+        "TierDecision enum/struct (Tier 1 / Tier 2 / Tier 3)",
+        "plan_token lifecycle API (issue on Tier 1/2, resolve on approval, reject on Tier 3)",
+        "AutoApprovalPolicy struct with decision_hash + nonce + TTL (default 30s)",
+        "/approvals outbound webhook to Brain (Bearer token auth, 3-retry backoff)",
+        "Audit log write contract (TierDecision written before execution)"
+      ],
+      "interfacesConsumed": [
+        "~/.vashion/policy/allowlist.json (external user-editable config)"
+      ],
+      "confidence": "high",
+      "rationale": "Phase 1 foundation story; technicalNotes identifies it as 'the critical shared gate used by VSH-001, VSH-002, and VSH-004' with no upstream story dependencies named."
+    },
+    {
+      "storyId": "VSH-004",
+      "dependsOn": [
+        "VSH-003"
+      ],
+      "interfacesProduced": [
+        "File operation API (read, write, delete, move, list) over Unix socket",
+        "Workspace root config reader from ~/.vashion/config.toml",
+        "Path canonicalization and symlink escape detection function",
+        "Per-operation tier assignment rules (delete always Tier 2)"
+      ],
+      "interfacesConsumed": [
+        "VSH-003 ActionDescriptor/TierDecision firewall classify() contract",
+        "~/.vashion/config.toml workspace roots config (external)"
+      ],
+      "confidence": "high",
+      "rationale": "implementationPlan explicitly states 'Wire all operations through VSH-003 firewall' and acceptance criteria requires TierDecision contract for every file operation."
+    },
+    {
+      "storyId": "VSH-005",
+      "dependsOn": [],
+      "interfacesProduced": [
+        "Session token struct { token, epoch, issued_at, ttl } written to ~/.vashion/auth/core.token (mode 600)",
+        "Token validation API (check token AND epoch on every Unix socket connection)",
+        "Rekey protocol (epoch increment, Brain degraded-state transition, token reload)",
+        "Encrypted credential store API (Anthropic/OpenAI/Ollama) with [REDACTED] log filter",
+        "ModelRegistry struct (name, provider, context_window, cost_tier)",
+        "Auth state struct for inclusion in VSH-007 checkpoint"
+      ],
+      "interfacesConsumed": [
+        "~/.vashion/auth/core.token file path (external filesystem)"
+      ],
+      "confidence": "high",
+      "rationale": "No other story's interface is required; auth token generation and credential store are standalone Phase 1 capabilities with no named upstream story dependency in technicalNotes or implementationPlan."
+    },
+    {
+      "storyId": "VSH-006",
+      "dependsOn": [
+        "VSH-005"
+      ],
+      "interfacesProduced": [
+        "Heartbeat snapshot event schema (processes, containers, disk, memory, network)",
+        "DeltaClassification enum (routine / notable / urgent)",
+        "Escalation state machine per resource (normal \u2192 warning \u2192 urgent \u2192 sustained_urgent)",
+        "Brain /events webhook delivery with Bearer token auth and 3-retry backoff",
+        "24h pulse history store with automatic pruning"
+      ],
+      "interfacesConsumed": [
+        "VSH-005 session token for Bearer token webhook authentication",
+        "tokio interval scheduler (external Rust crate)"
+      ],
+      "confidence": "medium",
+      "rationale": "implementationPlan requires 'Bearer token auth' on Brain webhook delivery; VSH-005 is the sole producer of session tokens in the architecture, but VSH-005 is not explicitly named in VSH-006's text."
+    },
+    {
+      "storyId": "VSH-007",
+      "dependsOn": [
+        "VSH-005",
+        "VSH-006"
+      ],
+      "interfacesProduced": [
+        "Checkpoint struct (active processes, open Docker ops, pending Tier 2 approvals, auth state reference, heartbeat cursor)",
+        "Atomic checkpoint write API (write to temp, then rename) triggered on SIGTERM/SIGINT and pre-Tier-2",
+        "Checkpoint rotation scheme (keep last 5 at ~/.vashion/checkpoints/)",
+        "Clean/dirty classification API on startup"
+      ],
+      "interfacesConsumed": [
+        "VSH-005 auth state struct (for checkpoint inclusion)",
+        "VSH-006 urgent event delivery API (dirty checkpoint surfaced as urgent event)"
+      ],
+      "confidence": "high",
+      "rationale": "implementationPlan explicitly names both: 'Integrate auth state reference from VSH-005 into checkpoint struct' and 'surface dirty as urgent event via VSH-006.'"
+    },
+    {
+      "storyId": "VSH-008",
+      "dependsOn": [
+        "VSH-003"
+      ],
+      "interfacesProduced": [
+        "SQLite schema at ~/.vashion/memory.db in WAL mode (episodic table, durable table, approval_state table)",
+        "Memory Unix socket API (read, write, query, promote, expire operations)",
+        "Single async write queue (tokio channel) with core|brain source tagging",
+        "Context budget enforcement (item-level drop, never truncation)",
+        "approval_state table for pending plan_token records"
+      ],
+      "interfacesConsumed": [
+        "VSH-003 plan_token schema (shapes approval_state table for pending Tier 2 records)"
+      ],
+      "confidence": "medium",
+      "rationale": "Acceptance criteria states 'Pending Tier 2 plan_token records stored in MEM_S; never silently expire,' implying the approval_state schema must reflect VSH-003's plan_token contract, though VSH-003 is not explicitly named in VSH-008's implementationPlan."
+    },
+    {
+      "storyId": "VSH-009",
+      "dependsOn": [
+        "VSH-001",
+        "VSH-002",
+        "VSH-003",
+        "VSH-004",
+        "VSH-005",
+        "VSH-006",
+        "VSH-007",
+        "VSH-008"
+      ],
+      "interfacesProduced": [
+        "MCP tool definitions (shell_exec, docker_op, file_read, file_write, memory_query, heartbeat_status)",
+        "Unix socket client with session token + epoch auth and 30s per-call timeout",
+        "LLM fallback chain (Anthropic \u2192 OpenAI \u2192 Ollama) with cost logging (model, tokens in, tokens out, duration ms)",
+        "Three failure mode handlers (connection refused \u2192 degraded, auth rejection \u2192 rekey, timeout \u2192 degraded)",
+        "traceparent propagation contract across all hops"
+      ],
+      "interfacesConsumed": [
+        "VSH-001 shell execution Unix socket API",
+        "VSH-002 Docker operation Unix socket API",
+        "VSH-004 file operation Unix socket API",
+        "VSH-005 session token + epoch auth contract",
+        "VSH-005 ModelRegistry struct for LLM fallback chain",
+        "VSH-006 heartbeat_status Unix socket API",
+        "VSH-007 checkpoint state (recovery path)",
+        "VSH-008 memory Unix socket API (memory_query, write, promote, expire)"
+      ],
+      "confidence": "high",
+      "rationale": "technicalNotes explicitly states 'Depends on Phase 1 (VSH-001 through VSH-008) complete'; each Phase 1 story produces a Unix socket API or auth contract that VSH-009 wraps as a named MCP tool."
+    },
+    {
+      "storyId": "VSH-010",
+      "dependsOn": [
+        "VSH-009"
+      ],
+      "interfacesProduced": [
+        "Goal priority queue API (urgent/operator/scheduled tiers with preemption semantics)",
+        "Goal lifecycle state machine (queued/active/blocked/complete/failed/preempted)",
+        "Resource lock model (workspace/container/system, acquire-all-or-none atomic)",
+        "Goal intake REST API endpoint",
+        "Core-unreachable handler with active-goal failure and blocked-goal re-queue"
+      ],
+      "interfacesConsumed": [
+        "VSH-009 MCP tool interface (shell_exec, docker_op, file_read, file_write, memory_query)",
+        "VSH-009 traceparent propagation contract",
+        "Soul.md and Behavior.md (external files, hard error if missing)"
+      ],
+      "confidence": "high",
+      "rationale": "technicalNotes explicitly states 'Depends on VSH-009'; Goal Loop writes goal history and reasoning steps to episodic memory and executes all actions via VSH-009 MCP tools."
+    },
+    {
+      "storyId": "VSH-011",
+      "dependsOn": [
+        "VSH-009"
+      ],
+      "interfacesProduced": [
+        "Relevance scoring model with tunable weights from ~/.vashion/memory-config.toml",
+        "6-stage durable promotion pipeline (candidate detection, normalization, dedup, operator review bundle, immutable approval record, durable write with provenance)",
+        "Session-start narrative synthesis API (last heartbeat delta + durable context briefing)",
+        "Context budget assembly API (rank by relevance, item-level drop)",
+        "Durable lifecycle API (immutable writes, deprecation chain for updates, soft/hard delete)"
+      ],
+      "interfacesConsumed": [
+        "VSH-009 Unix socket memory API (memory_query, write, promote operations)",
+        "VSH-008 MEM_S context budget limits (via VSH-009)"
+      ],
+      "confidence": "high",
+      "rationale": "technicalNotes explicitly states 'Depends on VSH-009. No direct SQLite access \u2014 all reads and writes through VSH-009 Unix socket API.'"
+    },
+    {
+      "storyId": "VSH-012",
+      "dependsOn": [
+        "VSH-010",
+        "VSH-011"
+      ],
+      "interfacesProduced": [
+        "Brain /events webhook endpoint",
+        "Heartbeat event classifier against Soul.md/Behavior.md rules",
+        "Session-start heartbeat narrative (last 24h history loaded before first goal)",
+        "While-you-were-away section for events during Brain offline gap",
+        "Offline urgent event delivery path (core local queue, delivered on reconnect)"
+      ],
+      "interfacesConsumed": [
+        "VSH-010 Goal Loop priority queue (priority-0 goal insertion for urgent events)",
+        "VSH-011 MEM_I episodic write API (notable event forwarding)",
+        "VSH-006 heartbeat snapshot event schema and DeltaClassification enum"
+      ],
+      "confidence": "high",
+      "rationale": "technicalNotes explicitly states 'Depends on VSH-010 and VSH-011'; urgent events insert as priority-0 goal into VSH-010 and notable events forward to VSH-011 MEM_I."
+    },
+    {
+      "storyId": "VSH-013",
+      "dependsOn": [
+        "VSH-009",
+        "VSH-010",
+        "VSH-011",
+        "VSH-012"
+      ],
+      "interfacesProduced": [
+        "REST API at 127.0.0.1:7474 (goal submission, goal status, heartbeat summary, memory query, system status, plugin webhook receiver)",
+        "request_id (UUID v4) generation and traceparent injection at request entry",
+        "Plugin webhook auth validation (token check before any Brain forwarding)",
+        "Proxy middleware for all Brain-bound requests with auth forwarding",
+        "/health endpoint returning Core and Brain reachability status"
+      ],
+      "interfacesConsumed": [
+        "VSH-009 Brain Unix socket MCP interface",
+        "VSH-010 Goal Loop goal intake API",
+        "VSH-011 memory query API (via VSH-009)",
+        "VSH-012 Brain /events endpoint (session token validation for Core\u2192Brain webhook calls)"
+      ],
+      "confidence": "high",
+      "rationale": "technicalNotes explicitly states 'Depends on Phase 2 (VSH-009 through VSH-012) complete'; the REST proxy and webhook validation require Brain endpoints from all Phase 2 stories."
+    },
+    {
+      "storyId": "VSH-014",
+      "dependsOn": [
+        "VSH-013",
+        "VSH-015"
+      ],
+      "interfacesProduced": [
+        "SPA bundle served by VSH-013 at 127.0.0.1:7474 (no CDN, all assets local)",
+        "Goals panel (active goals with status, step trace, result)",
+        "Heartbeat panel (live event feed with routine/notable/urgent classification)",
+        "Memory panel (episodic timeline and durable browser)",
+        "System panel (disk, memory, container status)",
+        "REPL panel with Tier classification preview and Tier 2 inline approval/denial UI"
+      ],
+      "interfacesConsumed": [
+        "VSH-013 REST API endpoints (goal submission, status, memory query, heartbeat summary, system status)",
+        "VSH-015 WebSocket push channels (goal state, heartbeat events, Tier 2 approval prompts, urgent alerts)"
+      ],
+      "confidence": "high",
+      "rationale": "technicalNotes explicitly states 'Depends on VSH-013 and VSH-015'; the SPA is served by VSH-013 and real-time updates depend on VSH-015's typed WebSocket push channels."
+    },
+    {
+      "storyId": "VSH-015",
+      "dependsOn": [
+        "VSH-013"
+      ],
+      "interfacesProduced": [
+        "WebSocket server at 127.0.0.1:7474/ws",
+        "Typed server-push message schema (goal state changes, heartbeat events, Tier 2 approval prompts, urgent alerts)",
+        "Client-originated message schema (goal submission, Tier 2 approval/denial, REPL commands)",
+        "Client auto-reconnect with exponential backoff (max 30s interval)",
+        "Message validation pipeline (malformed messages logged and discarded)"
+      ],
+      "interfacesConsumed": [
+        "VSH-013 Canvas Backend request validation pipeline (all incoming WS messages route through it)",
+        "VSH-010 Goal Loop state change events",
+        "VSH-012 heartbeat event stream",
+        "VSH-008 Tier 2 approval state (plan_token records; re-fetched on reconnect)"
+      ],
+      "confidence": "high",
+      "rationale": "technicalNotes explicitly states 'Depends on VSH-013'; all incoming WS messages must route through Canvas Backend validation pipeline, and the WS server shares the VSH-013 HTTP server process."
+    },
+    {
+      "storyId": "VSH-016",
+      "dependsOn": [
+        "VSH-013",
+        "VSH-010"
+      ],
+      "interfacesProduced": [
+        "Slack plugin handler in brain/plugins/ within single plugin host process",
+        "Slack webhook receiver with token validation",
+        "Goal submission path (Slack DM \u2192 VSH-013 \u2192 Brain Goal Loop)",
+        "Proactive push channel (Brain urgent alert \u2192 Slack DM/channel)"
+      ],
+      "interfacesConsumed": [
+        "VSH-013 plugin webhook auth validation API (token check before Brain forwarding)",
+        "VSH-010 Goal Loop goal intake API",
+        "VSH-005 Brain auth context (session token shared within plugin host process)"
+      ],
+      "confidence": "high",
+      "rationale": "technicalNotes explicitly states 'All plugin-originated requests enter via VSH-013 Canvas Backend \u2014 no direct Brain access' and implementationPlan names the goal submission path as 'Slack DM \u2192 VSH-013 \u2192 Brain Goal Loop' (VSH-010)."
+    },
+    {
+      "storyId": "VSH-017",
+      "dependsOn": [
+        "VSH-013",
+        "VSH-010"
+      ],
+      "interfacesProduced": [
+        "Telegram plugin handler in brain/plugins/ within single plugin host process",
+        "Telegram bot webhook receiver with token validation",
+        "Goal submission path (Telegram \u2192 VSH-013 \u2192 Brain Goal Loop)",
+        "Proactive push channel (Brain urgent alert \u2192 Telegram chat)"
+      ],
+      "interfacesConsumed": [
+        "VSH-013 plugin webhook auth validation API (token check before Brain forwarding)",
+        "VSH-010 Goal Loop goal intake API",
+        "VSH-005 Brain auth context (session token shared within plugin host process)"
+      ],
+      "confidence": "high",
+      "rationale": "technicalNotes explicitly states 'Same architecture as VSH-016 \u2014 single plugin host process, all requests through Canvas Backend,' confirming identical VSH-013 and VSH-010 interface dependencies as VSH-016."
+    }
+  ]
+}

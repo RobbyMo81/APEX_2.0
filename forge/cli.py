@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -15,6 +16,8 @@ from .logging import info
 from .preflight import PreflightError, run_preflight
 from .prd_validator import main as prd_validator_main
 from .runner import run_main, run_once
+from .tagteam.orchestrator import run_orchestrator
+from .tagteam.planner import run_planner
 from .worklog_loop import run_worklog_loop
 
 
@@ -191,6 +194,77 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Launch the Forge config TUI (Rust binary). "
             "Python-owned dispatch; Rust is the implementation."
+        ),
+    )
+
+    # V2-046: TagTeam Planner Agent
+    plan_parser = subparsers.add_parser(
+        "plan",
+        help=(
+            "Run the TagTeam Planner: reads prd.json, invokes Claude, "
+            "and writes tagteam.plan.json with interface-level dependency analysis."
+        ),
+    )
+    plan_parser.add_argument(
+        "--prd",
+        default="prd.json",
+        help="Path to prd.json (default: prd.json). Never mutated.",
+    )
+    plan_parser.add_argument(
+        "--output",
+        default="tagteam.plan.json",
+        help="Output path for the plan file (default: tagteam.plan.json).",
+    )
+    plan_parser.add_argument(
+        "--rerun",
+        action="store_true",
+        help=(
+            "Re-run mode: glob existing source files to upgrade speculative "
+            "dependencies to confirmed ones based on real interfaces."
+        ),
+    )
+    plan_parser.add_argument(
+        "--timeout",
+        type=float,
+        default=300.0,
+        help="Claude backend timeout in seconds (default: 300).",
+    )
+
+    # V2-049: TagTeam Orchestrator — Wave Scheduler and Dispatch
+    tagteam_parser = subparsers.add_parser(
+        "tagteam",
+        help=(
+            "Run the TagTeam Orchestrator: compute ready queue from plan, "
+            "dispatch stories to parallel agent slots, and run post-wave gates."
+        ),
+    )
+    tagteam_parser.add_argument(
+        "max_agents",
+        type=int,
+        nargs="?",
+        default=None,
+        help=(
+            "Maximum concurrent agent slots.  Defaults to FORGE_TAGTEAM_AGENTS "
+            "env var or 2."
+        ),
+    )
+    tagteam_parser.add_argument(
+        "--plan",
+        default="tagteam.plan.json",
+        help="Path to tagteam.plan.json (default: tagteam.plan.json).",
+    )
+    tagteam_parser.add_argument(
+        "--prd",
+        default="prd.json",
+        help="Path to prd.json (default: prd.json). Read-only.",
+    )
+    tagteam_parser.add_argument(
+        "--auto-confirm",
+        action="store_true",
+        default=False,
+        help=(
+            "Skip the low-confidence dependency review gate.  "
+            "Equivalent to FORGE_TAGTEAM_AUTO_CONFIRM=true."
         ),
     )
 
@@ -417,11 +491,38 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_commit_rules_command(list(args.commit_rules_args))
     if args.command == "config":
         return run_config_command()
+    if args.command == "plan":
+        config = load_config()
+        return run_planner(
+            prd_file=Path(args.prd),
+            repo_root=config.repo_root,
+            workspace_dir=config.workspace_dir,
+            output_file=Path(args.output),
+            rerun=args.rerun,
+            timeout=args.timeout,
+        )
     if args.command == "validate-prd":
         argv_prd = [args.raw_prd]
         if args.prd_out:
             argv_prd += ["--prd-out", args.prd_out]
         return prd_validator_main(argv_prd)
+    if args.command == "tagteam":
+        config = load_config()
+        max_agents = (
+            args.max_agents
+            if args.max_agents is not None
+            else int(os.environ.get("FORGE_TAGTEAM_AGENTS", "2"))
+        )
+        auto_confirm = args.auto_confirm or (
+            os.environ.get("FORGE_TAGTEAM_AUTO_CONFIRM", "").lower() == "true"
+        )
+        return run_orchestrator(
+            config=config,
+            max_agents=max_agents,
+            plan_file=Path(args.plan),
+            prd_file=Path(args.prd),
+            skip_low_confidence_check=auto_confirm,
+        )
 
     parser.print_help(sys.stderr)
     return 1

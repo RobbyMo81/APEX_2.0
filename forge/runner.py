@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 
 from .agents import AgentTask, get_backend
@@ -63,6 +64,35 @@ def _output_snippet(text: str, limit: int = 800) -> str:
     if len(cleaned) <= limit:
         return cleaned
     return cleaned[:limit] + "\n...[truncated]..."
+
+
+def _extract_token_usage(stdout: str, stderr: str) -> tuple[int, int]:
+    """Best-effort token extraction from backend output.
+
+    Supports common shapes emitted by CLIs/loggers:
+    - input_tokens / output_tokens
+    - prompt_tokens / completion_tokens
+    - total_tokens (fallback split to input=total, output=0)
+    """
+    text = f"{stdout}\n{stderr}"
+
+    def _sum(pattern: str) -> int:
+        return sum(int(m.group(1)) for m in re.finditer(pattern, text, flags=re.IGNORECASE))
+
+    input_tokens = _sum(r'"?input_tokens"?\s*[:=]\s*(\d+)')
+    output_tokens = _sum(r'"?output_tokens"?\s*[:=]\s*(\d+)')
+
+    if input_tokens == 0:
+        input_tokens = _sum(r'"?prompt_tokens"?\s*[:=]\s*(\d+)')
+    if output_tokens == 0:
+        output_tokens = _sum(r'"?completion_tokens"?\s*[:=]\s*(\d+)')
+
+    if input_tokens == 0 and output_tokens == 0:
+        total_tokens = _sum(r'"?total_tokens"?\s*[:=]\s*(\d+)')
+        if total_tokens > 0:
+            input_tokens = total_tokens
+
+    return max(0, input_tokens), max(0, output_tokens)
 
 
 @dataclass(frozen=True, slots=True)
@@ -409,8 +439,20 @@ def run_quality_gates(
     repo_root: Path,
     gates_file: Path,
     env: Mapping[str, str],
+    *,
+    cwd: Path | None = None,
 ) -> CommandResult:
-    return run_command(["bash", str(gates_file)], cwd=repo_root, env=env, check=False)
+    """Run the quality gates script.
+
+    Args:
+        repo_root:  Default working directory (config.repo_root for single-agent mode).
+        gates_file: Path to the forge.gates.sh script to execute.
+        env:        Environment mapping for the subprocess.
+        cwd:        Optional override working directory.  When provided (e.g. for a
+                    TagTeam per-worktree gate run) it is used instead of repo_root.
+    """
+    effective_cwd = cwd if cwd is not None else repo_root
+    return run_command(["bash", str(gates_file)], cwd=effective_cwd, env=env, check=False)
 
 
 def run_once(
@@ -456,7 +498,11 @@ def run_once(
     # ── Branch ownership (V2-037) ──────────────────────────────────────────
     # Mirrors forge.sh step 5: ensure_branch runs after archive and before story
     # selection so the commit lands on the correct branch every iteration.
-    ensure_branch(config.repo_root, prd.branch_name)
+    # Skip in TagTeam worktree mode — the worktree is already on its own branch;
+    # attempting checkout of prd.branch_name fails because it's checked out in
+    # the main worktree.
+    if not os.environ.get("FORGE_TAGTEAM"):
+        ensure_branch(config.repo_root, prd.branch_name)
 
     story = prd.next_story()
     if story is None:
@@ -532,7 +578,26 @@ def run_once(
 
     try:
         try:
-            run_agent_command(config, story, agent_command, agent_env, session_id=session_id, iteration=iteration)
+            backend_exec = run_agent_command(
+                config,
+                story,
+                agent_command,
+                agent_env,
+                session_id=session_id,
+                iteration=iteration,
+            )
+            if mem is not None and session_id is not None:
+                in_tok, out_tok = _extract_token_usage(backend_exec.stdout, backend_exec.stderr)
+                if in_tok > 0 or out_tok > 0:
+                    mem.record_token_usage(
+                        session_id,
+                        iteration,
+                        story.id,
+                        in_tok,
+                        out_tok,
+                        backend=config.agent_backend,
+                        source="runner.regex",
+                    )
         except StoryExecutionError as exc:
             # ── Backend failure: BACKEND_TIMEOUT or BACKEND_ERROR ────────────────
             # Mirrors forge.sh run_iteration() lines 726-741 and mark_story_failed()

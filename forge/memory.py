@@ -51,6 +51,20 @@ CREATE TABLE IF NOT EXISTS agent_iterations (
   CHECK(gate_result IS NULL OR gate_result IN ('pass','fail','skipped'))
 );
 
+CREATE TABLE IF NOT EXISTS token_ledger (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id     TEXT NOT NULL,
+  iteration      INTEGER,
+  story_id       TEXT,
+  backend        TEXT,
+  model          TEXT,
+  input_tokens   INTEGER NOT NULL DEFAULT 0,
+  output_tokens  INTEGER NOT NULL DEFAULT 0,
+  total_tokens   INTEGER NOT NULL DEFAULT 0,
+  source         TEXT,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS agent_messages (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   from_session  TEXT NOT NULL,
@@ -110,6 +124,39 @@ CREATE TABLE IF NOT EXISTS audit_log (
   detail        TEXT,
   ts            TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS story_claims (
+  story_id        TEXT PRIMARY KEY,
+  session_id      TEXT NOT NULL,
+  claimed_at      TEXT NOT NULL,
+  lease_expires_at TEXT NOT NULL,
+  heartbeat_at    TEXT NOT NULL,
+  tried_backends  TEXT NOT NULL DEFAULT '[]'
+);
+
+CREATE TABLE IF NOT EXISTS worktree_ownership (
+  worktree_path   TEXT PRIMARY KEY,
+  session_id      TEXT NOT NULL,
+  story_id        TEXT NOT NULL,
+  created_at      TEXT NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'active',
+  CHECK(status IN ('active','detached','blocked','orphaned'))
+);
+
+CREATE TABLE IF NOT EXISTS resolver_attempts (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  story_a_id      TEXT NOT NULL,
+  story_b_id      TEXT NOT NULL,
+  attempt_number  INTEGER NOT NULL,
+  classification  TEXT NOT NULL,
+  outcome         TEXT NOT NULL,
+  session_id      TEXT NOT NULL,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  CHECK(classification IN ('structural','additive','prd.json')),
+  CHECK(outcome IN ('patched','escalated','capped'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_resolver_attempts_pair_num
+  ON resolver_attempts (story_a_id, story_b_id, attempt_number);
 
 CREATE TABLE IF NOT EXISTS db_meta (
   key   TEXT PRIMARY KEY,
@@ -199,6 +246,16 @@ class ForgeMemory:
     def init(self) -> None:
         """Create schema if new — mirrors memory_init()."""
         self.execute_script(_SCHEMA_SQL)
+        # Migration: add tried_backends column if upgrading an existing DB
+        with self._connect() as conn:
+            try:
+                conn.execute(
+                    "ALTER TABLE story_claims "
+                    "ADD COLUMN tried_backends TEXT NOT NULL DEFAULT '[]'"
+                )
+                conn.commit()
+            except Exception:
+                pass  # Column already exists — idempotent
 
     # ── Health check ─────────────────────────────────────────────────────
 
@@ -301,6 +358,46 @@ class ForgeMemory:
         )
         self.audit(session_id, iteration, story_id, "ITERATION_END", "agent_iterations",
                    f"status={status} gate={gate_result}")
+
+    def record_token_usage(
+        self,
+        session_id: str,
+        iteration: int | None,
+        story_id: str | None,
+        input_tokens: int,
+        output_tokens: int,
+        *,
+        backend: str | None = None,
+        model: str | None = None,
+        source: str = "runner",
+    ) -> None:
+        """Append token-usage telemetry for a single execution attempt."""
+        input_tokens = max(0, int(input_tokens))
+        output_tokens = max(0, int(output_tokens))
+        total_tokens = input_tokens + output_tokens
+        self.execute(
+            "INSERT INTO token_ledger(session_id, iteration, story_id, backend, model, input_tokens, output_tokens, total_tokens, source)"
+            " VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);",
+            (
+                session_id,
+                iteration,
+                story_id,
+                backend,
+                model,
+                input_tokens,
+                output_tokens,
+                total_tokens,
+                source,
+            ),
+        )
+        self.audit(
+            session_id,
+            iteration,
+            story_id,
+            "TOKENS_RECORDED",
+            "token_ledger",
+            f"input={input_tokens} output={output_tokens} total={total_tokens} source={source}",
+        )
 
     # ── Messaging ────────────────────────────────────────────────────────
 
