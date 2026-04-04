@@ -880,6 +880,10 @@ main() {
       local tagteam_agents="${2:-2}"
       export FORGE_TAGTEAM=true
       export FORGE_TAGTEAM_AGENTS="$tagteam_agents"
+      # Ensure worktree subprocesses inherit the correct prd.json and workspace.
+      export FORGE_PRD_FILE="${FORGE_PRD_FILE:-$PRD_FILE}"
+      export FORGE_WORKSPACE_DIR
+      export FORGE_AGENT_TIMEOUT_SECONDS="${FORGE_AGENT_TIMEOUT_SECONDS:-1800}"
       if [[ -x "${SCRIPT_DIR}/.venv/bin/python" ]]; then
         "${SCRIPT_DIR}/.venv/bin/python" -m forge tagteam "$tagteam_agents"
       elif command -v python3 &>/dev/null && python3 -c "import forge" &>/dev/null; then

@@ -235,11 +235,16 @@ class Orchestrator:
             ) from exc
 
         # 3. Build environment for agent subprocess
+        # Explicitly forward FORGE_PRD_FILE and FORGE_WORKSPACE_DIR so worktree
+        # subprocesses use the correct prd.json and shared workspace, regardless
+        # of whether the caller's shell exported these vars.
         env = {
             **os.environ,
             "FORGE_TAGTEAM": "true",
             "FORGE_TAGTEAM_STORY_ID": story_id,
             "FORGE_AGENT_BACKEND": backend,
+            "FORGE_PRD_FILE": str(self.prd_file.resolve()),
+            "FORGE_WORKSPACE_DIR": str(self.config.workspace_dir),
         }
 
         # 4. Determine gates file for this worktree
@@ -689,8 +694,8 @@ def run_orchestrator(
     Returns:
         Exit code: 0 on complete, 1 on gate_failed/blocked/error.
     """
-    resolved_plan = plan_file or (config.repo_root / "tagteam.plan.json")
-    resolved_prd = prd_file or config.prd_file
+    resolved_plan = (plan_file or (config.repo_root / "tagteam.plan.json")).resolve()
+    resolved_prd = (prd_file or config.prd_file).resolve()
     db_path = config.workspace_dir / "forge-memory.db"
     session_id = os.environ.get("FORGE_SESSION_ID", "tagteam-adhoc")
 
