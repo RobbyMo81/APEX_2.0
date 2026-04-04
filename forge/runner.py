@@ -504,7 +504,16 @@ def run_once(
     if not os.environ.get("FORGE_TAGTEAM"):
         ensure_branch(config.repo_root, prd.branch_name)
 
-    story = prd.next_story()
+    # In TagTeam worktree mode, the Orchestrator sets FORGE_TAGTEAM_STORY_ID to
+    # the specific story this slot should work on.  Use that instead of
+    # next_story() so each worktree works on the right story.
+    tagteam_story_id = os.environ.get("FORGE_TAGTEAM_STORY_ID")
+    if tagteam_story_id:
+        story = prd.find_story(tagteam_story_id)
+        if story is None:
+            raise ValueError(f"FORGE_TAGTEAM_STORY_ID={tagteam_story_id!r} not found in prd.json")
+    else:
+        story = prd.next_story()
     if story is None:
         # UAP completion gate: run final lint before declaring the mission complete.
         # Mirrors forge.sh uap_gate() — block on lint failure, emit COMPLETE on success.

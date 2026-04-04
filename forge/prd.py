@@ -64,6 +64,12 @@ class PrdDocument:
             return None
         return sorted(remaining, key=lambda story: story.priority)[0]
 
+    def find_story(self, story_id: str) -> UserStory | None:
+        for story in self.stories():
+            if story.id == story_id:
+                return story
+        return None
+
     def mark_story(self, story_id: str, passes: bool) -> None:
         stories_raw = self.data.get("userStories", [])
         if not isinstance(stories_raw, list):
