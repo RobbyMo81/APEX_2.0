@@ -108,6 +108,12 @@ pub struct ShellEngine {
     allowlist_path: PathBuf,
 }
 
+impl Default for ShellEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ShellEngine {
     /// Construct an engine with a 15-minute default timeout.
     pub fn new() -> Self {
