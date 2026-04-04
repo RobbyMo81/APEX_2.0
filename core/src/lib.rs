@@ -9,4 +9,6 @@
 // VSH-007: checkpoint & crash recovery
 // VSH-008: memory store
 
+pub mod auth;
+pub mod model_registry;
 pub mod shell;

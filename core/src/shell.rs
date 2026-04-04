@@ -110,6 +110,7 @@ pub struct ShellEngine {
 
 impl ShellEngine {
     /// Construct an engine with a 15-minute default timeout.
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
         ShellEngine {
