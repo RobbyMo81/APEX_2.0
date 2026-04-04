@@ -83,8 +83,8 @@
       "id": "VSH-003",
       "title": "Policy Firewall",
       "priority": 3,
-      "status": "todo",
-      "passes": false,
+      "status": "done",
+      "passes": true,
       "storyType": "implementation",
       "description": "Deterministic policy firewall classifying every action via machine-verifiable ActionDescriptor schema into Tier 1 (auto-execute), Tier 2 (approval required), or Tier 3 (blocked). Soul.md and Behavior.md tune policy — they do not replace the classifier.",
       "acceptanceCriteria": [
