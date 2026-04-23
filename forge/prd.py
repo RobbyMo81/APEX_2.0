@@ -13,6 +13,7 @@ class UserStory:
     priority: int
     passes: bool
     status: str
+    depends_on: tuple[str, ...]
     raw: dict[str, Any]
 
 
@@ -46,6 +47,7 @@ class PrdDocument:
             status = self._normalize_story_status(story_raw.get("status"), bool(passes))
             if not isinstance(story_id, str) or not isinstance(title, str):
                 continue
+            depends_on = story_raw.get("dependsOn", [])
             parsed.append(
                 UserStory(
                     id=story_id,
@@ -53,16 +55,22 @@ class PrdDocument:
                     priority=int(priority),
                     passes=bool(passes),
                     status=status,
+                    depends_on=tuple(d for d in depends_on if isinstance(d, str)),
                     raw=dict(story_raw),
                 )
             )
         return parsed
 
     def next_story(self) -> UserStory | None:
-        remaining = [story for story in self.stories() if not story.passes]
+        passed_ids = {s.id for s in self.stories() if s.passes}
+        remaining = [
+            s
+            for s in self.stories()
+            if not s.passes and all(dep in passed_ids for dep in s.depends_on)
+        ]
         if not remaining:
             return None
-        return sorted(remaining, key=lambda story: story.priority)[0]
+        return sorted(remaining, key=lambda s: s.priority)[0]
 
     def find_story(self, story_id: str) -> UserStory | None:
         for story in self.stories():
