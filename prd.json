@@ -55,8 +55,8 @@
       "id": "VSH-002",
       "title": "Docker Lifecycle Integration",
       "priority": 2,
-      "status": "todo",
-      "passes": false,
+      "status": "done",
+      "passes": true,
       "storyType": "implementation",
       "description": "Rust-native Docker integration for managing local containers. All operations flow through the VSH-003 policy firewall with the same Tier 1/2/3 admission contract as VSH-001.",
       "acceptanceCriteria": [

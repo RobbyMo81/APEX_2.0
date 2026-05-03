@@ -34,3 +34,24 @@ Use `aes-gcm = "0.10"` (stable). `0.11.0-rc.3` is the latest on crates.io but is
 - `core/Cargo.toml` — added aes-gcm, rand, base64, zeroize, toml
 - `core/src/auth.rs` — new file (VSH-005 full implementation)
 - `core/src/lib.rs` — added `pub mod auth;`
+
+---
+
+## VSH-002 — 2026-05-03
+
+### Pattern Discovered
+`DockerClient` shells out to the `docker` CLI via `tokio::process::Command` with `-H unix://<socket_path>` to target a specific socket. `--privileged` is stripped at descriptor construction (never forwarded in argv) and also blocked before the firewall is called, so the firewall never sees a privileged request. `docker_prune` and `docker_rm` action classes are in `ALWAYS_TIER2_CLASSES` in `firewall.rs` — no configuration can override this.
+
+### Pattern: `new_with_home` constructor idiom
+Any struct that derives its audit/config paths from `$HOME` must expose a `new_with_home(home: &Path)` variant alongside `new()`. `new()` reads the env var; `new_with_home` takes an explicit path. Tests always call the `_with_home` variant to eliminate the `env::set_var` race condition. Applied to both `DockerClient` and `FileEngine`.
+
+### Gotcha: env::set_var races in parallel unit tests
+Setting `HOME` via `env::set_var` in a test helper and then reading it in a constructor creates a race window when `cargo test` runs tests in parallel threads. Symptoms: intermittent audit log path mismatches — the log is written to the `tmp` dir of a _different_ concurrent test. Fix: add `new_with_home(home: &Path)` and use it in every test that checks audit log presence.
+
+### Gotcha: load_workspace_roots uses HOME env var
+`load_workspace_roots()` reads `$HOME` at call time. Tests that set `HOME` and immediately call it are still racy. Use `load_workspace_roots_from(tmp.path())` in tests.
+
+### Files Modified
+- `core/src/docker.rs` — VSH-002 Docker engine; added `new_with_home`; `use std::path::Path`
+- `core/src/files.rs` — added `FileEngine::new_with_home`; added `load_workspace_roots_from`; fixed 4 tests to use explicit-home constructors
+- `prd.json` — VSH-002 marked status=done, passes=true
