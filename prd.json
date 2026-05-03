@@ -124,8 +124,8 @@
       "id": "VSH-004",
       "title": "Policy-Bounded File Operations",
       "priority": 4,
-      "status": "todo",
-      "passes": false,
+      "status": "done",
+      "passes": true,
       "storyType": "implementation",
       "description": "File system operations scoped to configured workspace roots with policy tier enforcement via VSH-003.",
       "acceptanceCriteria": [

@@ -55,3 +55,26 @@ Setting `HOME` via `env::set_var` in a test helper and then reading it in a cons
 - `core/src/docker.rs` — VSH-002 Docker engine; added `new_with_home`; `use std::path::Path`
 - `core/src/files.rs` — added `FileEngine::new_with_home`; added `load_workspace_roots_from`; fixed 4 tests to use explicit-home constructors
 - `prd.json` — VSH-002 marked status=done, passes=true
+
+## VSH-004 — 2026-05-03
+
+### Pattern Discovered
+`FileEngine::resolve_and_check` walks the path component-by-component, checking each symlink as it's encountered. This detects multi-hop escapes before the `ActionDescriptor` is constructed — the firewall never sees an escaped path. This is the canonical pre-FW safety gate pattern for all file operations.
+
+### Pattern: Tier enforcement by operation type
+- `file_read`, `file_write`, `file_list`: Tier 1 inside workspace, Tier 2 outside (scope-based via `scope_for()`).
+- `file_delete`, `file_move`: Always Tier 2 via `ALWAYS_TIER2_CLASSES` in `firewall.rs` — irreversibility is enforced at the classifier level, not the caller.
+- Defense-in-depth: even if the firewall classifier returned Tier 1 for delete/move (impossible given ALWAYS_TIER2), the `match` arm treats `Tier::Tier1` as Tier2 pending.
+
+### Pattern: `new_with_home` constructor idiom (also seen in VSH-002)
+`FileEngine::new_with_home(roots, home)` takes an explicit home path so tests never touch `env::set_var`. `load_workspace_roots_from(home)` does the same. All tests that check audit log output must use these variants.
+
+### Gotcha: Symlink escape check stops at first non-existent component
+`resolve_and_check` stops walking when it hits a non-existent path component. This is intentional for write targets (the file doesn't exist yet). The parent directory is still checked. If the parent itself escapes, that is caught.
+
+### Gotcha: Empty workspace roots means all operations → Tier 2
+If `~/.vashion/config.toml` is missing or has no `[workspace]` section, `workspace_roots` is empty. `is_within_workspace()` returns false for every path. All read/write/list operations escalate to Tier 2 minimum. This is the correct safe default.
+
+### Files Modified
+- `core/src/files.rs` — VSH-004 full implementation (workspace config reader, symlink escape detection, read/write/delete/move/list with tier enforcement, audit logging, 16 unit tests)
+- `prd.json` — VSH-004 marked status=done, passes=true
