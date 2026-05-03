@@ -78,3 +78,25 @@ If `~/.vashion/config.toml` is missing or has no `[workspace]` section, `workspa
 ### Files Modified
 - `core/src/files.rs` — VSH-004 full implementation (workspace config reader, symlink escape detection, read/write/delete/move/list with tier enforcement, audit logging, 16 unit tests)
 - `prd.json` — VSH-004 marked status=done, passes=true
+
+---
+
+## VSH-006 — 2026-05-03
+
+### Pattern Discovered
+`HeartbeatEngine::new_with_home` follows the same explicit-home-path pattern as `DockerClient` and `FileEngine`. All tests use `new_with_home(brain_url, token, tmp.path())` to avoid HOME env var races. The `sysinfo::System` instance is held across pulses so CPU usage is computed as a delta between successive `refresh_all()` calls — first pulse shows ~0% CPU, which is correct.
+
+### Pattern: Z-score with minimum stddev floor
+When all samples in the window are identical (stddev≈0), the engine uses `max(|mean| * 0.01, 1.0)` as a minimum effective stddev. This detects large absolute deviations (e.g. 300 vs baseline 100) while ignoring tiny floating-point noise (100.5 vs 100). Without this floor, clear outliers against a rock-steady baseline would be missed.
+
+### Gotcha: `pub mod heartbeat` was missing from lib.rs
+`heartbeat.rs` was written but never registered in `lib.rs`. The module compiled as dead code — tests never ran, and no prior session caught the gap. Always verify `pub mod <name>` appears in `lib.rs` after adding a new module file.
+
+### Gotcha: sysinfo 0.30 API breaks from sysinfo 0.29
+- `System::global_cpu_usage()` does not exist in 0.30. Use `system.global_cpu_info().cpu_usage()`.
+- `Process::name()` returns `&str` in 0.30 (not `OsStr`). `.to_string_lossy()` will not compile. Use `p.name() == svc` directly.
+
+### Files Modified
+- `core/src/lib.rs` — added `pub mod heartbeat;`
+- `core/src/heartbeat.rs` — fixed sysinfo 0.30 API calls; fixed z-score zero-stddev floor; auto-formatted
+- `prd.json` — VSH-006 marked status=done, passes=true

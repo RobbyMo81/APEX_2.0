@@ -13,4 +13,5 @@ pub mod auth;
 pub mod docker;
 pub mod files;
 pub mod firewall;
+pub mod heartbeat;
 pub mod shell;

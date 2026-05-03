@@ -192,8 +192,8 @@
       "id": "VSH-006",
       "title": "Heartbeat & Event Bus",
       "priority": 6,
-      "status": "todo",
-      "passes": false,
+      "status": "done",
+      "passes": true,
       "storyType": "implementation",
       "description": "Continuous environment monitoring with delta classification (routine/notable/urgent) and push-based event delivery to brain via authenticated HTTP POST webhook.",
       "acceptanceCriteria": [
