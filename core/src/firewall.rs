@@ -238,9 +238,15 @@ impl AuditLog {
     /// Append one decision record to the audit log (JSON Lines format).
     /// This MUST be called before execution proceeds.
     pub fn write(&self, decision: &TierDecision) -> Result<(), String> {
+        self.write_value(decision)
+    }
+
+    /// Append any serializable value as a JSON Lines entry.
+    /// Used by subsystems (e.g., docker engine) to log privilege violations.
+    pub fn write_value<T: Serialize>(&self, value: &T) -> Result<(), String> {
         use std::io::Write;
         let line =
-            serde_json::to_string(decision).map_err(|e| format!("audit serialize error: {e}"))?;
+            serde_json::to_string(value).map_err(|e| format!("audit serialize error: {e}"))?;
         if let Some(parent) = self.path.parent() {
             fs::create_dir_all(parent).map_err(|e| format!("audit dir create error: {e}"))?;
         }

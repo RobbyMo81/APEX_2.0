@@ -23,7 +23,10 @@ def copy_if_exists(source: Path, destination: Path) -> None:
     if not source.exists():
         return
     destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, destination)
+    try:
+        shutil.copy2(source, destination)
+    except shutil.SameFileError:
+        pass  # source and destination are the same file (e.g. symlink) — nothing to do
 
 
 def touch_if_missing(path: Path) -> None:

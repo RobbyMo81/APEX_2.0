@@ -1,0 +1,1 @@
+/home/spoq/vashion/target/debug/libvashion_core.rlib: /home/spoq/vashion/core/src/auth.rs /home/spoq/vashion/core/src/docker.rs /home/spoq/vashion/core/src/files.rs /home/spoq/vashion/core/src/firewall.rs /home/spoq/vashion/core/src/lib.rs /home/spoq/vashion/core/src/shell.rs
